@@ -7,7 +7,7 @@ This repository contains the solution for the Senior QA Automation Engineer prac
 1.  **Prerequisites:** [Node.js](https://nodejs.org/) (version 18+) must be installed.
 2.  **Clone & Install:**
     ```bash
-    git clone https://github.com/YOUR_USERNAME/playwright-saucedemo-challenge.git
+    git clone https://github.com/Ruturaj0861/playwright-saucedemo-challenge.git
     cd playwright-saucedemo-challenge
     npm install
     npx playwright install
