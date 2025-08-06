@@ -1,5 +1,4 @@
-# Name of your workflow
-name: Playwright Tests
+name: playwright-saucedemo-challenge
 
 on:
   push:
