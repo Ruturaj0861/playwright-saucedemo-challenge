@@ -1,38 +1,44 @@
-import { type Page, type Locator } from '@playwright/test';
+import { type Page } from "@playwright/test";
+import { BasePage } from "./BasePage";
+import { checkoutInfo } from "../data/testData";
+import { parsePrice } from "../utils/helpers";
 
-export class CheckoutPages {
-  readonly page: Page;
-  readonly firstNameInput: Locator;
-  readonly lastNameInput: Locator;
-  readonly postalCodeInput: Locator;
-  readonly continueButton: Locator;
-  readonly finishButton: Locator;
-  readonly subtotalLabel: Locator;
-  readonly taxLabel: Locator;
-  readonly totalLabel: Locator;
-  readonly confirmationHeader: Locator;
+export class CheckoutPages extends BasePage {
+  private readonly firstNameInput = this.page.locator(
+    '[data-test="firstName"]'
+  );
+  private readonly lastNameInput = this.page.locator('[data-test="lastName"]');
+  private readonly postalCodeInput = this.page.locator(
+    '[data-test="postalCode"]'
+  );
+  private readonly continueButton = this.page.locator('[data-test="continue"]');
+  private readonly finishButton = this.page.locator('[data-test="finish"]');
+  private readonly subtotalLabel = this.page.locator(".summary_subtotal_label");
+  private readonly taxLabel = this.page.locator(".summary_tax_label");
+  private readonly totalLabel = this.page.locator(".summary_total_label");
+  private readonly confirmationHeader = this.page.locator(".complete-header");
 
   constructor(page: Page) {
-    this.page = page;
-    this.firstNameInput = page.locator('[data-test="firstName"]');
-    this.lastNameInput = page.locator('[data-test="lastName"]');
-    this.postalCodeInput = page.locator('[data-test="postalCode"]');
-    this.continueButton = page.locator('[data-test="continue"]');
-    this.finishButton = page.locator('[data-test="finish"]');
-    this.subtotalLabel = page.locator('.summary_subtotal_label');
-    this.taxLabel = page.locator('.summary_tax_label');
-    this.totalLabel = page.locator('.summary_total_label');
-    this.confirmationHeader = page.locator('.complete-header');
+    super(page);
   }
 
-  async fillInformation(firstName: string, lastName: string, postalCode: string) {
-    await this.firstNameInput.fill(firstName);
-    await this.lastNameInput.fill(lastName);
-    await this.postalCodeInput.fill(postalCode);
-    await this.continueButton.click();
+  async fillInformationAndContinue() {
+    await this.enterValue(this.firstNameInput, checkoutInfo.firstName);
+    await this.enterValue(this.lastNameInput, checkoutInfo.lastName);
+    await this.enterValue(this.postalCodeInput, checkoutInfo.postalCode);
+    await this.clickElement(this.continueButton);
+  }
+
+  async getOrderSubtotal(): Promise<number> {
+    const subtotalText = await this.getElementText(this.subtotalLabel);
+    return parsePrice(subtotalText);
+  }
+
+  async getConfirmationText(): Promise<string> {
+    return this.getElementText(this.confirmationHeader);
   }
 
   async finishCheckout() {
-    await this.finishButton.click();
+    await this.clickElement(this.finishButton);
   }
 }

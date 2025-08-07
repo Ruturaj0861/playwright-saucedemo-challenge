@@ -1,25 +1,26 @@
-import { type Page, type Locator } from '@playwright/test';
+import { type Page } from "@playwright/test";
+import { InventoryPage } from "./InventoryPage";
+import { BasePage } from "./BasePage";
 
-export class LoginPage {
-  readonly page: Page;
-  readonly usernameInput: Locator;
-  readonly passwordInput: Locator;
-  readonly loginButton: Locator;
+export class LoginPage extends BasePage {
+  private readonly usernameInput = this.page.locator('[data-test="username"]');
+  private readonly passwordInput = this.page.locator('[data-test="password"]');
+  private readonly loginButton = this.page.locator(
+    '[data-test="login-button"]'
+  );
 
   constructor(page: Page) {
-    this.page = page;
-    this.usernameInput = page.locator('[data-test="username"]');
-    this.passwordInput = page.locator('[data-test="password"]');
-    this.loginButton = page.locator('[data-test="login-button"]');
+    super(page);
   }
 
   async goto() {
-    await this.page.goto('/');
+    await this.page.goto("/");
   }
 
-  async login(username: string, password?: string) {
-    await this.usernameInput.fill(username);
-    await this.passwordInput.fill(password || '');
-    await this.loginButton.click();
+  async loginAs(username: string, password?: string): Promise<InventoryPage> {
+    await this.enterValue(this.usernameInput, username);
+    await this.enterValue(this.passwordInput, password || "");
+    await this.clickElement(this.loginButton);
+    return new InventoryPage(this.page);
   }
 }

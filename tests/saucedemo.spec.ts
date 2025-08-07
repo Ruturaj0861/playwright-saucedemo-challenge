@@ -1,69 +1,88 @@
-import { test, expect } from '@playwright/test';
-import { LoginPage } from '../src/pages/LoginPage';
-import { InventoryPage } from '../src/pages/InventoryPage';
-import { CartPage } from '../src/pages/CartPage';
-import { CheckoutPages } from '../src/pages/CheckoutPages';
-import { parsePrice } from '../src/utils/helpers';
+import { test, expect } from "@playwright/test";
+import { LoginPage } from "../src/pages/LoginPage";
+import { InventoryPage } from "../src/pages/InventoryPage";
+import { confirmationMessages } from "../src/data/testData";
 
-test.describe('SauceDemo E2E Tests', () => {
-  const standard_user = process.env.STANDARD_USER!;
-  const problem_user = process.env.PROBLEM_USER!;
-  const password = process.env.PASSWORD!;
+const standard_user = process.env.STANDARD_USER!;
+const problem_user = process.env.PROBLEM_USER!;
+const password = process.env.PASSWORD!;
 
-  test('TC-001: Add three least expensive products, remove second-least, checkout and verify', async ({ page }) => {
-    const loginPage = new LoginPage(page);
-    const inventoryPage = new InventoryPage(page);
-    const cartPage = new CartPage(page);
-    const checkoutPages = new CheckoutPages(page);
-    await loginPage.goto();
-    await loginPage.login(standard_user, password);
-    const allProducts = await inventoryPage.getAllProducts();
-    const sortedProducts = allProducts.sort((a, b) => a.price - b.price);
-    const leastExpensiveThree = sortedProducts.slice(0, 3);
-    const [productA, productB, productC] = leastExpensiveThree;
-    for (const product of leastExpensiveThree) {
-      await inventoryPage.addProductToCart(product.name);
-    }
-    await cartPage.goto();
-    await cartPage.removeProduct(productB.name);
-    await cartPage.checkoutButton.click();
-    await checkoutPages.fillInformation('Ruturaj', 'Darekar', '12345');
-    const expectedSubtotal = parseFloat((productA.price + productC.price).toFixed(2));
-    const subtotalText = await checkoutPages.subtotalLabel.innerText();
-    expect(parsePrice(subtotalText)).toBe(expectedSubtotal);
-    await checkoutPages.finishCheckout();
-    await expect(checkoutPages.confirmationHeader).toHaveText('Thank you for your order!');
+test.describe("SauceDemo E2E Tests", () => {
+  test.describe("Standard User", () => {
+    let inventoryPage: InventoryPage;
+
+    test.beforeEach(async ({ page }) => {
+      const loginPage = new LoginPage(page);
+      await loginPage.goto();
+      inventoryPage = await loginPage.loginAs(standard_user, password);
+    });
+
+    test("TC-001: Full checkout flow with least expensive items", async () => {
+      const leastExpensiveProducts =
+        await inventoryPage.getLeastExpensiveProducts(3);
+      await inventoryPage.addProductsToCart(leastExpensiveProducts);
+      expect(await inventoryPage.getCartCount()).toBe(3);
+
+      const cartPage = await inventoryPage.navigateToCart();
+
+      const productsInCart = await cartPage.getProductsInCart();
+      // Use toEqual to compare the content of two arrays of objects
+      expect(productsInCart).toEqual(leastExpensiveProducts);
+
+      const productToRemove = leastExpensiveProducts[1];
+      await cartPage.removeProduct(productToRemove.name);
+
+      const remainingProductsInCart = await cartPage.getProductsInCart();
+      const expectedRemainingProducts = leastExpensiveProducts.filter(
+        (p) => p.name !== productToRemove.name
+      );
+      expect(remainingProductsInCart).toEqual(expectedRemainingProducts);
+
+      const checkoutPage = await cartPage.navigateToCheckout();
+      await checkoutPage.fillInformationAndContinue();
+
+      const expectedSubtotal = expectedRemainingProducts.reduce(
+        (sum, p) => sum + p.price,
+        0
+      );
+      const actualSubtotal = await checkoutPage.getOrderSubtotal();
+      expect(actualSubtotal).toBe(expectedSubtotal);
+
+      await checkoutPage.finishCheckout();
+      const confirmationText = await checkoutPage.getConfirmationText();
+      expect(confirmationText).toBe(confirmationMessages.orderComplete);
+    });
+
+    test("TC-002: Verify product details consistency", async () => {
+      const products = await inventoryPage.getProducts("hilo");
+      const thirdHighestProduct = products[2];
+
+      await inventoryPage.openProductDetails(thirdHighestProduct);
+      const productDetailsOnPage =
+        await inventoryPage.getProductDetailsFromPage();
+
+      expect(productDetailsOnPage).toEqual(thirdHighestProduct);
+    });
   });
-  
-  test('TC-002: Navigate to third highest-priced product and verify consistency (standard_user)', async ({ page }) => {
-    const loginPage = new LoginPage(page);
-    const inventoryPage = new InventoryPage(page);
-    await loginPage.goto();
-    await loginPage.login(standard_user, password);
-    await inventoryPage.getAllProducts(); 
-    await inventoryPage.sortProductsBy('hilo');
-    const allProductsSorted = await inventoryPage.getAllProducts();
-    const thirdHighestProduct = allProductsSorted[2];
-    await inventoryPage.openProductDetails(thirdHighestProduct.name);
-    const detailName = await page.locator('.inventory_details_name').innerText();
-    const detailPriceString = await page.locator('.inventory_details_price').innerText();
-    expect(detailName).toBe(thirdHighestProduct.name);
-    expect(parsePrice(detailPriceString)).toBe(thirdHighestProduct.price);
-  });
 
-  test('TC-003: Navigate to third highest-priced product and verify name & price consistency (problem_user)', async ({ page }) => {
-    test.fail(); 
-    const loginPage = new LoginPage(page);
-    const inventoryPage = new InventoryPage(page);
-    await loginPage.goto();
-    await loginPage.login(problem_user, password);
-    await inventoryPage.getAllProducts(); 
-    await inventoryPage.sortProductsBy('hilo');
-    const allProductsSorted = await inventoryPage.getAllProducts();
-    const thirdHighestProduct = allProductsSorted[2];
-    await inventoryPage.openProductDetails(thirdHighestProduct.name);
-    const detailName = await page.locator('.inventory_details_name').innerText();
-    
-    expect(detailName).toBe(thirdHighestProduct.name);
+  test.describe("Problem User", () => {
+    test("TC-003: Verify product details consistency for problem_user", async ({
+      page,
+    }) => {
+      test.fail();
+
+      const loginPage = new LoginPage(page);
+      await loginPage.goto();
+      const inventoryPage = await loginPage.loginAs(problem_user, password);
+
+      const products = await inventoryPage.getProducts("hilo");
+      const thirdHighestProduct = products[2];
+
+      await inventoryPage.openProductDetails(thirdHighestProduct);
+      const productDetailsOnPage =
+        await inventoryPage.getProductDetailsFromPage();
+
+      expect(productDetailsOnPage).toEqual(thirdHighestProduct);
+    });
   });
 });
