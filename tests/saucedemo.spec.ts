@@ -26,7 +26,6 @@ test.describe("SauceDemo E2E Tests", () => {
       const cartPage = await inventoryPage.navigateToCart();
 
       const productsInCart = await cartPage.getProductsInCart();
-      // Use toEqual to compare the content of two arrays of objects
       expect(productsInCart).toEqual(leastExpensiveProducts);
 
       const productToRemove = leastExpensiveProducts[1];
