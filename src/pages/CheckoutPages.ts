@@ -42,3 +42,5 @@ export class CheckoutPages extends BasePage {
     await this.clickElement(this.finishButton);
   }
 }
+
+
