@@ -80,8 +80,10 @@ test.describe("SauceDemo E2E Tests", () => {
       await inventoryPage.openProductDetails(thirdHighestProduct);
       const productDetailsOnPage =
         await inventoryPage.getProductDetailsFromPage();
-
       expect(productDetailsOnPage).toEqual(thirdHighestProduct);
     });
   });
 });
+
+
+
